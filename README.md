@@ -18,11 +18,11 @@ El núcleo del software aplica modificaciones permanentes en el **Registro de Wi
 
 El software realiza un debloat profundo del sistema, desactivando servicios que consumen recursos de forma persistente o que generan interrupciones innecesarias en el procesador:
 
-* **Telemetría y Recopilación de Datos: Desactivación total de DiagTrack (Experiencias del usuario y telemetría) y dmwappushservice, eliminando el envío de datos en segundo plano y liberando ciclos de CPU.
-* **Gestión de Memoria y Almacenamiento: Deshabilitación de SysMain (antiguo Superfetch) para evitar el uso excesivo de disco y RAM en sistemas con unidades SSD, eliminando picos de latencia de entrada/salida.
-* **Optimización de Red y Entrega: Corte del servicio DoSvc (Optimización de entrega), impidiendo que el sistema utilice ancho de banda para distribuir actualizaciones a otros equipos mediante redes P2P.
-* **Reducción de Latencia de Indexación: Desactivación selectiva de WSearch (Windows Search) para evitar que el indexador analice archivos y consuma recursos durante sesiones de alta carga de trabajo.
-* **Eliminación de Procesos de Seguimiento: Suspensión del Distributed Link Tracking Client, que mantiene vínculos innecesarios entre archivos en redes locales, reduciendo el "overhead" del sistema de archivos.
+* **Telemetría y Recopilación de Datos**: Desactivación total de DiagTrack (Experiencias del usuario y telemetría) y dmwappushservice, eliminando el envío de datos en segundo plano y liberando ciclos de CPU.
+* **Gestión de Memoria y Almacenamiento**: Deshabilitación de SysMain (antiguo Superfetch) para evitar el uso excesivo de disco y RAM en sistemas con unidades SSD, eliminando picos de latencia de entrada/salida.
+* **Optimización de Red y Entrega**: Corte del servicio DoSvc (Optimización de entrega), impidiendo que el sistema utilice ancho de banda para distribuir actualizaciones a otros equipos mediante redes P2P.
+* **Reducción de Latencia de Indexación**: Desactivación selectiva de WSearch (Windows Search) para evitar que el indexador analice archivos y consuma recursos durante sesiones de alta carga de trabajo.
+* **Eliminación de Procesos de Seguimiento**: Suspensión del Distributed Link Tracking Client, que mantiene vínculos innecesarios entre archivos en redes locales, reduciendo el "overhead" del sistema de archivos.
 
 ## Mantenimiento y Diagnóstico Avanzado
 
