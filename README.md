@@ -16,6 +16,14 @@ El núcleo del software aplica modificaciones permanentes en el **Registro de Wi
 * **Optimización de Interfaz (UI)**: Reduce el **MenuShowDelay** a cero y activa **AutoEndTasks**, mejorando significativamente la fluidez de la experiencia de usuario.
 * **Ajustes de BCD**: Configuración de **disabledynamictick** y **useplatformtick** para estabilizar el temporizador global del sistema y reducir fluctuaciones.
 
+El software realiza un debloat profundo del sistema, desactivando servicios que consumen recursos de forma persistente o que generan interrupciones innecesarias en el procesador:
+
+* **Telemetría y Recopilación de Datos: Desactivación total de DiagTrack (Experiencias del usuario y telemetría) y dmwappushservice, eliminando el envío de datos en segundo plano y liberando ciclos de CPU.
+* **Gestión de Memoria y Almacenamiento: Deshabilitación de SysMain (antiguo Superfetch) para evitar el uso excesivo de disco y RAM en sistemas con unidades SSD, eliminando picos de latencia de entrada/salida.
+* **Optimización de Red y Entrega: Corte del servicio DoSvc (Optimización de entrega), impidiendo que el sistema utilice ancho de banda para distribuir actualizaciones a otros equipos mediante redes P2P.
+* **Reducción de Latencia de Indexación: Desactivación selectiva de WSearch (Windows Search) para evitar que el indexador analice archivos y consuma recursos durante sesiones de alta carga de trabajo.
+* **Eliminación de Procesos de Seguimiento: Suspensión del Distributed Link Tracking Client, que mantiene vínculos innecesarios entre archivos en redes locales, reduciendo el "overhead" del sistema de archivos.
+
 ## Mantenimiento y Diagnóstico Avanzado
 
 El módulo de mantenimiento profesional incluye herramientas de auditoría y limpieza del entorno:
@@ -31,7 +39,7 @@ Para el correcto funcionamiento de las modificaciones de bajo nivel, es necesari
 
 1. **Permisos de Administrador**: Es estrictamente obligatorio ejecutar la aplicación con **privilegios elevados** para permitir la escritura en ramas críticas del registro como **HKEY_LOCAL_MACHINE**.
 2. **Dependencias**: Se requiere la instalación previa de la librería **Pillow** para la gestión de la interfaz gráfica profesional.
-3. **Autenticación**: El acceso al sistema está protegido por una **contraseña universal** o una **clave de licencia de hardware** única por equipo.
+3. **Autenticación**: El acceso al sistema está protegido por una **clave de licencia de hardware** única por equipo.
 
 ## Seguridad e Integridad
 
@@ -46,7 +54,7 @@ Para el correcto funcionamiento de las modificaciones de bajo nivel, es necesari
 © 2025 **CacheCore Windows Default Optimizer**. Todos los derechos reservados.
 
 El software se rige bajo una **Licencia Propietaria**:
-* **Validación de Hardware (HWID)**: El sistema utiliza un generador de identidad basado en la **Placa Base**, **Procesador**, **BIOS** y **Número de Serie del Disco** para vincular la licencia a un equipo único.
+* **Validación de Hardware (HWID)**: El sistema utiliza un Identificador unico para vincular la licencia a cada equipo.
 * **Protección de Lógica**: Queda prohibida la **ingeniería inversa**, **descompilación** o **redistribución no autorizada** de los módulos de optimización y seguridad para proteger la propiedad intelectual del proyecto.
 
 ---
