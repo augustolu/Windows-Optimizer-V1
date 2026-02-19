@@ -1,12 +1,15 @@
-import tkinter as tk
-from tkinter import scrolledtext, messagebox, simpledialog, TclError
-import threading
 import sys
 import os
 import base64
 import time
-from tkinter import Entry, Label, Button
-from PIL import Image, ImageTk
+import threading
+from PyQt6.QtWidgets import (
+    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+    QPushButton, QLabel, QTextEdit, QGraphicsBlurEffect, QMessageBox,
+    QInputDialog, QFrame
+)
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QObject
+from PyQt6.QtGui import QPixmap, QPalette, QBrush, QFont, QColor
 
 # Imports de nuestros módulos
 from config.settings import (
@@ -17,616 +20,484 @@ from config.settings import (
 from utils.system import is_admin, run_command_in_shell
 from utils.files import extract_7z_resources, run_anydesk
 from utils.registry import set_registry_value
-from ui.components import RoundedButton, ConsoleManager
 from ui.dialogs import ModernPasswordDialog
 from features.security import HardwareIDGenerator
 from features.optimization import SystemOptimizer
 from features.maintenance import SystemMaintenance
 
-class CacheCoreApp:
+
+class LogSignals(QObject):
+    """Señales para actualizar logs desde threads"""
+    log_signal = pyqtSignal(str)
+
+
+class WindowsOptimizerApp(QMainWindow):
     def __init__(self):
-        # Verificar permisos de administrador primero
+        super().__init__()
+        
+        # Verificar permisos de administrador
         if not is_admin():
-            self.show_error("ERROR: Se necesitan permisos de administrador.")
+            QMessageBox.critical(None, "Error", "ERROR: Se necesitan permisos de administrador.")
             sys.exit(1)
-            
-        # Ejecutar AnyDesk antes de pedir la contraseña
+        
+        # Ejecutar AnyDesk
         run_anydesk()
-            
-        # Verificar contraseña universal o licencia
+        
+        # Verificar contraseña
         if not self.check_password():
             sys.exit(1)
-            
-        # Crear ventana principal después de la autenticación
-        self.root = tk.Tk()
-        self.setup_window()
-        self.create_widgets()
         
-        # Inicializar consola
-        self.console = ConsoleManager(self.console_text)
-        self.console.add_log("✅ Sistema Windows-Optimizer-V1 iniciado correctamente")
-        self.console.add_log("💫 Sistema de Optimización Avanzado para Windows")
-        self.console.add_log("=" * 50)
+        # Señales para logs
+        self.log_signals = LogSignals()
+        self.log_signals.log_signal.connect(self.add_log_safe)
         
+        self.init_ui()
         extract_7z_resources()
-        
-        self.animate_entrance()
-        self.update_toggle_buttons()
     
     def check_password(self):
-        """Verifica la contraseña de acceso con diálogo moderno"""
+        """Verifica la contraseña de acceso"""
         dialog = ModernPasswordDialog(PASSWORD_HASH)
         dialog.dialog.mainloop()
         return dialog.result
     
-    def setup_window(self):
-        """Configura la ventana principal con aspecto profesional"""
-        self.root.title("Windows-Optimizer-V1 - Sistema de Optimización Avanzado para Windows")
-        self.root.geometry("900x700")
-        self.root.configure(bg=COLOR_BG)
-        self.root.resizable(False, False)
+    def init_ui(self):
+        """Inicializa la interfaz de usuario"""
+        # Configuración de la ventana
+        self.setWindowTitle("Windows-Optimizer-V1 - Sistema de Optimización Avanzado")
+        self.setFixedSize(1280, 720)
         
-        self.center_window()
+        # Centrar ventana
+        screen = QApplication.primaryScreen().geometry()
+        x = (screen.width() - 1280) // 2
+        y = (screen.height() - 720) // 2
+        self.move(x, y)
         
-        self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
+        # Widget central
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
         
-    def center_window(self):
-        """Centra la ventana en la pantalla"""
-        self.root.update_idletasks()
-        width = 900
-        height = 700
-        x = (self.root.winfo_screenwidth() // 2) - (width // 2)
-        y = (self.root.winfo_screenheight() // 2) - (height // 2)
-        self.root.geometry(f"{width}x{height}+{x}+{y}")
+        # Cargar imagen de fondo
+        self.set_background_image(central_widget)
         
-    def animate_entrance(self):
-        """Animación de entrada para la ventana principal"""
-        self.root.attributes('-alpha', 0.0)
+        # Layout principal
+        main_layout = QVBoxLayout(central_widget)
+        main_layout.setContentsMargins(40, 30, 40, 30)
         
-        def fade_in(alpha=0.0):
-            if alpha < 1.0:
-                self.root.attributes('-alpha', alpha)
-                self.root.after(10, fade_in, alpha + 0.05)
-            else:
-                self.root.attributes('-alpha', 1.0)
+        # Frame principal con glassmorphism
+        self.glass_frame = QFrame()
+        self.glass_frame.setObjectName("glassFrame")
+        self.apply_glassmorphism(self.glass_frame)
         
-        fade_in()
+        # Layout del frame glassmorphic
+        frame_layout = QVBoxLayout(self.glass_frame)
+        frame_layout.setSpacing(15)
+        frame_layout.setContentsMargins(30, 25, 30, 25)
         
-    def create_widgets(self):
-        """Crea todos los widgets de la interfaz"""
-        self.bg_canvas = tk.Canvas(self.root, bg=COLOR_BG, highlightthickness=0)
-        self.bg_canvas.place(x=0, y=0, relwidth=1, relheight=1)
+        # Crear contenido
+        self.create_header(frame_layout)
+        self.create_buttons(frame_layout)
+        self.create_console(frame_layout)
+        self.create_footer(frame_layout)
         
-        # Cargar imagen de fondo estática
-        self.load_background_image()
+        main_layout.addWidget(self.glass_frame)
         
-        main_frame = tk.Frame(self.root, bg=COLOR_BG)
-        main_frame.place(relx=0.5, rely=0.5, anchor="center", width=860, height=660)
+        # Botón de licencia en esquina
+        self.create_license_button()
         
-        self.create_header(main_frame)
-        self.create_main_buttons(main_frame)
-        self.create_console(main_frame)
-        self.create_footer(main_frame)
-        self.create_license_button(main_frame)
+        # Aplicar estilos
+        self.apply_styles()
+        
+        # Logs iniciales
+        self.add_log("[OK] Sistema Windows-Optimizer-V1 iniciado correctamente")
+        self.add_log("[INFO] Sistema de Optimización Avanzado para Windows")
+        self.add_log("=" * 60)
+        
+        # Animación de entrada
+        self.setWindowOpacity(0)
+        self.fade_in_animation()
     
-    def create_header(self, parent):
-        """Crea el encabezado con logo y título"""
-        header_frame = tk.Frame(parent, bg=COLOR_BG)
-        header_frame.pack(pady=(0, 20))
+    def set_background_image(self, widget):
+        """Establece la imagen de fondo"""
+        bg_paths = [
+            os.path.join(os.path.dirname(__file__), "assets", "background.png"),
+            os.path.join(os.path.dirname(__file__), "assets", "background.jpg"),
+            os.path.join(os.getcwd(), "assets", "background.png"),
+            os.path.join(os.getcwd(), "assets", "background.jpg")
+        ]
         
-        self.load_logo(header_frame)
+        for path in bg_paths:
+            if os.path.exists(path):
+                pixmap = QPixmap(path).scaled(1280, 720, Qt.AspectRatioMode.IgnoreAspectRatio, 
+                                              Qt.TransformationMode.SmoothTransformation)
+                palette = QPalette()
+                palette.setBrush(QPalette.ColorRole.Window, QBrush(pixmap))
+                widget.setAutoFillBackground(True)
+                widget.setPalette(palette)
+                return
         
-        title_label = tk.Label(header_frame, 
-                             text="Windows-Optimizer-V1",
-                             font=(MODERN_FONT, 24, "bold"),
-                             fg=COLOR_ACCENT, bg=COLOR_BG)
-        title_label.pack(pady=(10, 0))
-        
-        subtitle_label = tk.Label(header_frame,
-                                text="Sistema de Optimización Avanzado",
-                                font=(MODERN_FONT, 12),
-                                fg="#9900CC", bg=COLOR_BG)
-        subtitle_label.pack()
+        # Color de fondo por defecto
+        widget.setStyleSheet(f"background-color: {COLOR_BG};")
     
-    def toggle_no_lazy_mode(self):
-        """Activa/desactiva el modo NoLazyMode"""
-        config = load_config()
-        new_state = not config['no_lazy_mode']
-        
-        if new_state:
-            cmd = 'reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile" /v "NoLazyMode" /t REG_DWORD /d "1" /f'
-            success = run_command_in_shell(cmd)
-            if success:
-                self.console.add_log("✅ NoLazyMode ACTIVADO")
-                config['no_lazy_mode'] = True
-            else:
-                self.console.add_log("❌ Error al activar NoLazyMode: No se pudo modificar el registro")
-                return
-        else:
-            cmd = 'reg delete "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile" /v "NoLazyMode" /f'
-            success = run_command_in_shell(cmd)
-            if success:
-                self.console.add_log("✅ NoLazyMode DESACTIVADO")
-                config['no_lazy_mode'] = False
-            else:
-                self.console.add_log("❌ Error al desactivar NoLazyMode: No se pudo modificar el registro")
-                return
-        
-        if save_config(config):
-            self.update_toggle_buttons()
-        else:
-            self.console.add_log("❌ Error al guardar configuración de NoLazyMode")
-
-    def toggle_win_priority_control(self):
-        """Activa/desactiva el Win32PrioritySeparation"""
-        config = load_config()
-        new_state = not config['win_priority_control']
-        
-        if new_state:
-            success = set_registry_value(
-                r"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\PriorityControl",
-                "Win32PrioritySeparation", 0x2A
-            )
-            if success:
-                self.console.add_log("✅ Win32PrioritySeparation ACTIVADO (0x2A)")
-                config['win_priority_control'] = True
-            else:
-                self.console.add_log("❌ Error al activar Win32PrioritySeparation: No se pudo modificar el registro")
-                return
-        else:
-            success = set_registry_value(
-                r"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\PriorityControl",
-                "Win32PrioritySeparation", 0x28
-            )
-            if success:
-                self.console.add_log("✅ Win32PrioritySeparation DESACTIVADO (0x28)")
-                config['win_priority_control'] = False
-            else:
-                self.console.add_log("❌ Error al desactivar Win32PrioritySeparation: No se pudo modificar el registro")
-                return
-        
-        if save_config(config):
-            self.update_toggle_buttons()
-        else:
-            self.console.add_log("❌ Error al guardar configuración de Win32PrioritySeparation")
-
-    def update_toggle_buttons(self):
-        """Actualiza el estado visual de los botones toggle"""
-        config = load_config()
-        
-        if hasattr(self, 'no_lazy_btn'):
-            self.no_lazy_btn.set_active(config['no_lazy_mode'])
-            self.no_lazy_btn.update_text("🛑 DESACTIVAR NoLazyMode" if config['no_lazy_mode'] else "⚡ ACTIVAR NoLazyMode")
-        
-        if hasattr(self, 'win_priority_btn'):
-            self.win_priority_btn.set_active(config['win_priority_control'])
-            self.win_priority_btn.update_text("🛑 DESACTIVAR WinPriority" if config['win_priority_control'] else "⚡ ACTIVAR WinPriority")
-            
-    def load_logo(self, parent):
-        """Carga el logo desde archivo"""
-        try:
-            logo_paths = [
-                LOGO_FILE,
-                os.path.join(os.path.dirname(__file__), LOGO_FILE),
-                os.path.join(os.getcwd(), LOGO_FILE),
-                os.path.join(os.path.dirname(sys.argv[0]), LOGO_FILE),
-                os.path.join(os.path.dirname(sys.argv[0]), RESOURCES_FOLDER, LOGO_FILE)
-            ]
-            
-            for path in logo_paths:
-                if os.path.exists(path):
-                    img = Image.open(path)
-                    img = img.resize((80, 80), Image.Resampling.LANCZOS)
-                    logo_img = ImageTk.PhotoImage(img)
-                    
-                    logo_label = tk.Label(parent, image=logo_img, bg=COLOR_BG)
-                    logo_label.image = logo_img
-                    logo_label.pack()
-                    return True
-                    
-        except Exception as e:
-            print(f"Error cargando logo: {e}")
-        
-        logo_canvas = tk.Canvas(parent, width=80, height=80, bg=COLOR_BG, highlightthickness=0)
-        logo_canvas.pack()
-        logo_canvas.create_oval(10, 10, 70, 70, fill=COLOR_HOVER, outline="")
-        logo_canvas.create_text(40, 40, text="CC", fill="#FFFFFF", font=(MODERN_FONT, 20, "bold"))
-        return False
+    def apply_glassmorphism(self, widget):
+        """Aplica efecto glassmorphism con transparencia (sin blur en el contenido)"""
+        # NO aplicar blur effect porque hace ilegible el contenido
+        # En su lugar, usar solo transparencia en el estilo
+        widget.setStyleSheet("""
+            #glassFrame {
+                background-color: rgba(20, 0, 40, 0.85);
+                border: 2px solid rgba(204, 0, 255, 0.9);
+                border-radius: 20px;
+            }
+        """)
     
-    def create_main_buttons(self, parent):
+    def create_header(self, layout):
+        """Crea el encabezado"""
+        header_layout = QVBoxLayout()
+        header_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        header_layout.setSpacing(5)
+        
+        # Logo
+        if os.path.exists(LOGO_FILE):
+            logo_label = QLabel()
+            pixmap = QPixmap(LOGO_FILE).scaled(80, 80, Qt.AspectRatioMode.KeepAspectRatio,
+                                               Qt.TransformationMode.SmoothTransformation)
+            logo_label.setPixmap(pixmap)
+            logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            header_layout.addWidget(logo_label)
+        
+        # Título
+        title = QLabel("Windows-Optimizer-V1")
+        title.setObjectName("title")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        header_layout.addWidget(title)
+        
+        # Subtítulo
+        subtitle = QLabel("Sistema de Optimización Avanzado")
+        subtitle.setObjectName("subtitle")
+        subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        header_layout.addWidget(subtitle)
+        
+        layout.addLayout(header_layout)
+    
+    def create_buttons(self, layout):
         """Crea los botones principales"""
-        button_frame = tk.Frame(parent, bg=COLOR_BG)
-        button_frame.pack(pady=20)
+        buttons_layout = QVBoxLayout()
+        buttons_layout.setSpacing(10)
+        buttons_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
-        self.optimize_btn = RoundedButton(button_frame, width=280, height=50,
-                                        text="⚡ OPTIMIZACIÓN DEL SISTEMA",
-                                        font=(MODERN_FONT, 12, "bold"),
-                                        command=self.run_optimization)
-        self.optimize_btn.pack(pady=10)
+        # Botón Optimización
+        self.optimize_btn = QPushButton("OPTIMIZACIÓN DEL SISTEMA")
+        self.optimize_btn.setObjectName("mainButton")
+        self.optimize_btn.clicked.connect(self.run_optimization)
+        buttons_layout.addWidget(self.optimize_btn)
         
-        self.maintenance_btn = RoundedButton(button_frame, width=280, height=50,
-                                           text="🔧 MANTENIMIENTO AVANZADO",
-                                           font=(MODERN_FONT, 12, "bold"),
-                                           command=self.run_maintenance)
-        self.maintenance_btn.pack(pady=10)
+        # Botón Mantenimiento
+        self.maintenance_btn = QPushButton("MANTENIMIENTO AVANZADO")
+        self.maintenance_btn.setObjectName("mainButton")
+        self.maintenance_btn.clicked.connect(self.run_maintenance)
+        buttons_layout.addWidget(self.maintenance_btn)
         
-        config_frame = tk.Frame(button_frame, bg=COLOR_BG)
-        config_frame.pack(pady=10)
+        # Botón Benchmark
+        self.benchmark_btn = QPushButton("CORRER BENCHMARK")
+        self.benchmark_btn.setObjectName("mainButton")
+        self.benchmark_btn.clicked.connect(self.run_benchmark)
+        buttons_layout.addWidget(self.benchmark_btn)
         
-        config = load_config()
-        
-        self.no_lazy_btn = RoundedButton(config_frame, width=200, height=40,
-                                       text="⚡ ACTIVAR NoLazyMode" if not config['no_lazy_mode'] else "🛑 DESACTIVAR NoLazyMode",
-                                       font=(MODERN_FONT, 12, "bold"),
-                                       bg_color="#4C007D", hover_color="#6A00CC", active_color="#FF0066",
-                                       command=self.toggle_no_lazy_mode,
-                                       is_active=config['no_lazy_mode'])
-        self.no_lazy_btn.pack(side="left", padx=5)
-        
-        self.win_priority_btn = RoundedButton(config_frame, width=200, height=40,
-                                            text="⚡ ACTIVAR WinPriority" if not config['win_priority_control'] else "🛑 DESACTIVAR WinPriority",
-                                            font=(MODERN_FONT, 12, "bold"),
-                                            bg_color="#4C007D", hover_color="#6A00CC", active_color="#FF0066",
-                                            command=self.toggle_win_priority_control,
-                                            is_active=config['win_priority_control'])
-        self.win_priority_btn.pack(side="left", padx=5)
-        
-        self.generate_key_btn = RoundedButton(button_frame, width=280, height=50,
-                                            text="🔑 GENERAR CLAVE DE LICENCIA",
-                                            font=(MODERN_FONT, 12, "bold"),
-                                            command=self.generate_request_code)
-        self.generate_key_btn.pack(pady=10)
+        layout.addLayout(buttons_layout)
     
-    def generate_request_code(self):
-        """Genera el código de solicitud para la licencia y permite copiarlo"""
-        username = simpledialog.askstring("Nombre de Usuario", "Ingrese el nombre de usuario:", parent=self.root)
-        if not username:
-            return
-        
-        hardware_id = HardwareIDGenerator.get_hardware_id()
-        data = username + "|" + hardware_id
-        request_code = base64.b64encode(data.encode()).decode()
-        
-        dialog = tk.Toplevel(self.root)
-        dialog.title("Código de Solicitud")
-        dialog.geometry("500x200")
-        dialog.configure(bg=COLOR_BG)
-        dialog.resizable(False, False)
-        
-        dialog.update_idletasks()
-        x = (dialog.winfo_screenwidth() // 2) - (500 // 2)
-        y = (dialog.winfo_screenheight() // 2) - (200 // 2)
-        dialog.geometry(f"500x200+{x}+{y}")
-        
-        Label(dialog, text="Código de solicitud generado (puedes seleccionarlo y copiarlo):", 
-              fg="#FFFFFF", bg=COLOR_BG, font=(MODERN_FONT, 12)).pack(pady=10)
-        
-        entry = Entry(dialog, width=60, font=(MODERN_FONT, 10), bg="#2D004D", fg="#FFFFFF")
-        entry.insert(0, request_code)
-        entry.pack(pady=10)
-        entry.select_range(0, tk.END)
-        entry.focus()
-        
-        Button(dialog, text="Cerrar", command=dialog.destroy, bg=COLOR_HOVER, fg="#FFFFFF", 
-               font=(MODERN_FONT, 10, "bold"), relief="flat", padx=20, pady=8).pack(pady=10)
-        
-        dialog.grab_set()
+    def create_license_button(self):
+        """Crea el botón de licencia en la esquina inferior derecha"""
+        license_btn = QPushButton("Ver Licencia")
+        license_btn.setObjectName("cornerButton")
+        license_btn.clicked.connect(self.generate_request_code)
+        license_btn.setParent(self.glass_frame)
+        # Posicionar en la esquina inferior derecha
+        license_btn.setGeometry(1050, 615, 120, 30)
+        license_btn.show()
     
-    def create_console(self, parent):
+    def create_console(self, layout):
         """Crea la consola de logs"""
-        console_frame = tk.Frame(parent, bg=COLOR_BG)
-        console_frame.pack(fill="both", expand=True, pady=20)
-        
-        self.console_text = scrolledtext.ScrolledText(console_frame,
-                                                    height=12,
-                                                    bg="#0A0015",
-                                                    fg=COLOR_TEXT,
-                                                    font=("Consolas", 10),
-                                                    insertbackground=COLOR_TEXT,
-                                                    relief="flat",
-                                                    borderwidth=0)
-        self.console_text.pack(fill="both", expand=True)
-        
-        self.console_text.config(state="disabled")
+        self.console = QTextEdit()
+        self.console.setObjectName("console")
+        self.console.setReadOnly(True)
+        self.console.setMaximumHeight(200)
+        layout.addWidget(self.console)
     
-    def create_footer(self, parent):
-        """Crea el footer con derechos reservados"""
-        footer_frame = tk.Frame(parent, bg=COLOR_BG)
-        footer_frame.pack(pady=10)
+    def create_footer(self, layout):
+        """Crea el footer"""
+        footer_layout = QVBoxLayout()
+        footer_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        footer_layout.setSpacing(2)
         
-        copyright_text = "© 2025 Windows-Optimizer-V1 - Todos los derechos reservados. Sistema protegido por leyes de propiedad intelectual."
-        copyright_label = tk.Label(footer_frame,
-                                 text=copyright_text,
-                                 font=(MODERN_FONT, 9),
-                                 fg="#9900CC", bg=COLOR_BG)
-        copyright_label.pack()
+        copyright = QLabel("© 2025 Windows-Optimizer-V1 - Todos los derechos reservados")
+        copyright.setObjectName("copyright")
+        copyright.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        footer_layout.addWidget(copyright)
         
-        warning_text = "Sistema protegido - Distribución no autorizada prohibida"
-        warning_label = tk.Label(footer_frame,
-                               text=warning_text,
-                               font=(MODERN_FONT, 8, "italic"),
-                               fg=COLOR_WARNING, bg=COLOR_BG)
-        warning_label.pack()
+        warning = QLabel("Sistema protegido - Distribución no autorizada prohibida")
+        warning.setObjectName("warning")
+        warning.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        footer_layout.addWidget(warning)
+        
+        layout.addLayout(footer_layout)
+    
+    def apply_styles(self):
+        """Aplica los estilos CSS"""
+        self.setStyleSheet(f"""
+            QMainWindow {{
+                background-color: {COLOR_BG};
+            }}
+            
+            #title {{
+                color: {COLOR_ACCENT};
+                font-size: 32px;
+                font-weight: bold;
+                font-family: {MODERN_FONT}, Arial;
+            }}
+            
+            #subtitle {{
+                color: #9900CC;
+                font-size: 14px;
+                font-family: {MODERN_FONT}, Arial;
+            }}
+            
+            #mainButton {{
+                background-color: {COLOR_HOVER};
+                color: white;
+                border: none;
+                border-radius: 10px;
+                padding: 15px;
+                font-size: 14px;
+                font-weight: bold;
+                font-family: {MODERN_FONT}, Arial;
+                min-width: 350px;
+            }}
+            
+            #mainButton:hover {{
+                background-color: #6A00CC;
+            }}
+            
+            #mainButton:pressed {{
+                background-color: #330066;
+            }}
+            
+            #toggleButton {{
+                background-color: #4C007D;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                padding: 12px;
+                font-size: 12px;
+                font-weight: bold;
+                font-family: {MODERN_FONT}, Arial;
+                min-width: 240px;
+            }}
+            
+            #toggleButton:hover {{
+                background-color: #6A00CC;
+            }}
+            
+            #toggleButton[active="true"] {{
+                background-color: {COLOR_WARNING};
+            }}
+            
+            #toggleButton[active="true"]:hover {{
+                background-color: #FF3388;
+            }}
+            
+            #console {{
+                background-color: #0A0015;
+                color: {COLOR_TEXT};
+                border: 1px solid #9900CC;
+                border-radius: 8px;
+                padding: 8px;
+                font-family: Consolas, monospace;
+                font-size: 11px;
+            }}
+            
+            #copyright {{
+                color: #9900CC;
+                font-size: 10px;
+                font-family: {MODERN_FONT}, Arial;
+            }}
+            
+            #warning {{
+                color: {COLOR_WARNING};
+                font-size: 9px;
+                font-style: italic;
+                font-family: {MODERN_FONT}, Arial;
+            }}
+            
+            #cornerButton {{
+                background-color: #330066;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                padding: 6px;
+                font-size: 10px;
+                font-weight: bold;
+                font-family: {MODERN_FONT}, Arial;
+            }}
+            
+            #cornerButton:hover {{
+                background-color: {COLOR_HOVER};
+            }}
+        """)
+    
+    def fade_in_animation(self):
+        """Animación de entrada"""
+        self.opacity = 0.0
+        self.timer = QTimer()
+        self.timer.timeout.connect(self._fade_in_step)
+        self.timer.start(10)
+    
+    def _fade_in_step(self):
+        """Paso de la animación de fade in"""
+        self.opacity += 0.05
+        if self.opacity >= 1.0:
+            self.setWindowOpacity(1.0)
+            self.timer.stop()
+        else:
+            self.setWindowOpacity(self.opacity)
+    
+    def add_log(self, message):
+        """Añade un mensaje al log desde thread principal"""
+        self.log_signals.log_signal.emit(message)
+    
+    def add_log_safe(self, message):
+        """Añade un mensaje al log (thread-safe)"""
+        timestamp = time.strftime("%H:%M:%S")
+        formatted_message = f"[{timestamp}] {message}"
+        self.console.append(formatted_message)
     
     def run_optimization(self):
-        """Ejecuta la optimización del sistema"""
-        threading.Thread(target=self._run_optimization_thread, daemon=True).start()
+        """Muestra menú de selección de tipo de optimización"""
+        msg_box = QMessageBox(self)
+        msg_box.setWindowTitle("Seleccionar Tipo de Optimización")
+        msg_box.setText("¿Qué tipo de optimización deseas realizar?")
+        msg_box.setInformativeText(
+            "[GAMER] Optimización del sistema + NoLazyMode + WinPriority activados\n"
+            "[GENERAL] Optimización estándar del sistema"
+        )
+        
+        gamer_btn = msg_box.addButton("Optimización GAMER", QMessageBox.ButtonRole.AcceptRole)
+        general_btn = msg_box.addButton("Optimización GENERAL", QMessageBox.ButtonRole.AcceptRole)
+        cancel_btn = msg_box.addButton("Cancelar", QMessageBox.ButtonRole.RejectRole)
+        
+        msg_box.exec()
+        clicked = msg_box.clickedButton()
+        
+        if clicked == gamer_btn:
+            threading.Thread(target=self._run_optimization_thread, args=(True,), daemon=True).start()
+        elif clicked == general_btn:
+            threading.Thread(target=self._run_optimization_thread, args=(False,), daemon=True).start()
     
-    def _run_optimization_thread(self):
-        self.optimize_btn.config(state="disabled")
+    def _run_optimization_thread(self, gamer_mode=False):
+        """Thread de optimización"""
+        self.optimize_btn.setEnabled(False)
         
-        # Delegar a nuestro módulo de optimización
-        SystemOptimizer.run_optimization(self.console.add_log)
+        if gamer_mode:
+            self.add_log("[GAMER] Iniciando OPTIMIZACIÓN GAMER...")
+            self.add_log("[>>] Activando NoLazyMode...")
+            
+            # Activar NoLazyMode
+            cmd = 'reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile" /v "NoLazyMode" /t REG_DWORD /d "1" /f'
+            if run_command_in_shell(cmd):
+                self.add_log("[OK] NoLazyMode ACTIVADO")
+                config = load_config()
+                config['no_lazy_mode'] = True
+                save_config(config)
+            else:
+                self.add_log("[ERR] Error al activar NoLazyMode")
+            
+            self.add_log("[>>] Activando WinPriority...")
+            # Activar WinPriority
+            if set_registry_value(
+                r"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\PriorityControl",
+                "Win32PrioritySeparation", 0x2A
+            ):
+                self.add_log("[OK] Win32PrioritySeparation ACTIVADO (0x2A)")
+                config = load_config()
+                config['win_priority_control'] = True
+                save_config(config)
+            else:
+                self.add_log("[ERR] Error al activar Win32PrioritySeparation")
+        else:
+            self.add_log("[GENERAL] Iniciando OPTIMIZACIÓN GENERAL...")
         
-        self.console.add_log("🧹 Limpiando logs en 3 segundos...")
+        SystemOptimizer.run_optimization(self.add_log)
+        self.add_log("[...] Limpiando logs en 3 segundos...")
         time.sleep(3)
         self.console.clear()
-        self.console.add_log("✅ Optimización completada - Sistema listo")
         
-        self.optimize_btn.config(state="normal")
+        if gamer_mode:
+            self.add_log("[OK] Optimización GAMER completada - Sistema listo para juegos")
+        else:
+            self.add_log("[OK] Optimización GENERAL completada - Sistema listo")
+        
+        self.optimize_btn.setEnabled(True)
+    
+    def run_benchmark(self):
+        """Abre la ventana de benchmarks"""
+        from ui.benchmark_dialog import BenchmarkDialog
+        dialog = BenchmarkDialog(self)
+        dialog.exec()
     
     def run_maintenance(self):
         """Ejecuta el mantenimiento del sistema"""
-        self.confirm_maintenance()
+        reply = QMessageBox.question(self, 'Confirmación de Mantenimiento',
+                                     '[ADVERTENCIA] No realices mantenimiento seguido.\n'
+                                     'Recomendado: 1 vez por semana.\n\n'
+                                     '¿Deseas continuar?',
+                                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            threading.Thread(target=self._run_maintenance_thread, daemon=True).start()
     
     def _run_maintenance_thread(self):
-        if not hasattr(self, '_maintenance_confirmed') or not self._maintenance_confirmed:
-            return
-        
-        self._maintenance_confirmed = False
-        self.maintenance_btn.config(state="disabled")
-        
-        # Delegar a nuestro módulo de mantenimiento
-        SystemMaintenance.run_maintenance(self.console.add_log)
-        
-        self.maintenance_btn.config(state="normal")
-
-    def confirm_maintenance(self):
-        """Muestra una ventana de confirmación para el mantenimiento"""
-        confirm_win = tk.Toplevel(self.root)
-        confirm_win.title("Advertencia de Mantenimiento")
-        confirm_win.geometry("400x180")
-        confirm_win.configure(bg=COLOR_BG)
-        confirm_win.grab_set()
-        
-        last_log = sorted([f for f in os.listdir(os.getcwd()) if f.startswith("mantenimiento_") and f.endswith(".txt")], reverse=True)
-        last_date = "Nunca"
-        if last_log:
-            try:
-                last_date = last_log[0].replace("mantenimiento_", "").replace(".txt", "")
-            except:
-                pass
-
-        warning_label = tk.Label(
-            confirm_win,
-            text=f"⚠️ No realices mantenimiento seguido.\nRecomendado: 1 vez por semana.\nÚltimo mantenimiento: {last_date}",
-            fg=COLOR_ACCENT,
-            bg=COLOR_BG,
-            font=(MODERN_FONT, 11, "bold"),
-            justify="center",
-            wraplength=350
-        )
-        warning_label.pack(pady=20)
-
-        btn_frame = tk.Frame(confirm_win, bg=COLOR_BG)
-        btn_frame.pack(pady=10)
-
-        def start_maintenance():
-            self._maintenance_confirmed = True
-            confirm_win.destroy()
-            threading.Thread(target=self._run_maintenance_thread, daemon=True).start()
-
-        accept_btn = tk.Button(
-            btn_frame,
-            text="Aceptar",
-            font=(MODERN_FONT, 10, "bold"),
-            bg=COLOR_HOVER,
-            fg="#FFFFFF",
-            command=start_maintenance,
-            relief="flat"
-        )
-        accept_btn.pack(side="left", padx=10)
-
-        cancel_btn = tk.Button(
-            btn_frame,
-            text="Cancelar",
-            font=(MODERN_FONT, 10),
-            bg=COLOR_WARNING,
-            fg="#FFFFFF",
-            command=confirm_win.destroy,
-            relief="flat"
-        )
-        cancel_btn.pack(side="right", padx=10)
+        """Thread de mantenimiento"""
+        self.maintenance_btn.setEnabled(False)
+        SystemMaintenance.run_maintenance(self.add_log)
+        self.maintenance_btn.setEnabled(True)
     
-    def show_error(self, message):
-        """Muestra un mensaje de error"""
-        messagebox.showerror("Error", message)
+    def generate_request_code(self):
+        """Genera el código de solicitud para licencia"""
+        username, ok = QInputDialog.getText(self, 'Nombre de Usuario', 
+                                           'Ingrese el nombre de usuario:')
+        if ok and username:
+            hardware_id = HardwareIDGenerator.get_hardware_id()
+            data = username + "|" + hardware_id
+            request_code = base64.b64encode(data.encode()).decode()
+            
+            QMessageBox.information(self, 'Código de Solicitud',
+                                   f'Código generado:\n\n{request_code}\n\n'
+                                   'Copia este código para solicitar tu licencia.')
     
-    def create_license_button(self, parent):
-        """Crea el botón para ver información de la licencia"""
-        license_btn = tk.Button(parent, text="🔍 Ver Licencia", 
-                              command=self.show_license_info,
-                              bg="#330066", fg="#FFFFFF", 
-                              font=(MODERN_FONT, 8, "bold"),
-                              relief="flat", padx=10, pady=5,
-                              cursor="hand2")
-        license_btn.place(relx=0.98, rely=0.98, anchor="se")
+    def closeEvent(self, event):
+        """Maneja el evento de cierre"""
+        reply = QMessageBox.question(self, 'Salir',
+                                    '¿Estás seguro de que quieres salir de Windows-Optimizer-V1?',
+                                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
         
-        def on_enter(e):
-            license_btn.config(bg=COLOR_HOVER)
-        
-        def on_leave(e):
-            license_btn.config(bg="#330066")
-        
-        license_btn.bind("<Enter>", on_enter)
-        license_btn.bind("<Leave>", on_leave)
+        if reply == QMessageBox.StandardButton.Yes:
+            event.accept()
+        else:
+            event.ignore()
 
-    def show_license_info(self):
-        """Muestra la información de la licencia actual"""
-        # Implementación simplificada para el refactor, reutilizando lógica existente si posible
-        # o delegando a un módulo de licencia/UI si extrajéramos eso también.
-        # Por ahora lo mantenemos aquí o podríamos moverlo a ui/dialogs.py también.
-        # Para simplificar, lo dejaré aquí pero usando las utilidades.
-        
-        username, expiry_date = self.get_current_license_info()
-        
-        info_window = tk.Toplevel(self.root)
-        info_window.title("Información de Licencia")
-        info_window.geometry("400x250")
-        info_window.configure(bg=COLOR_BG)
-        info_window.resizable(False, False)
-        info_window.transient(self.root)
-        info_window.grab_set()
-        
-        info_window.update_idletasks()
-        x = (info_window.winfo_screenwidth() // 2) - (200)
-        y = (info_window.winfo_screenheight() // 2) - (125)
-        info_window.geometry(f"400x250+{x}+{y}")
-        
-        main_frame = tk.Frame(info_window, bg=COLOR_BG)
-        main_frame.pack(fill="both", expand=True, padx=20, pady=20)
-        
-        title_label = tk.Label(main_frame, text="📄 INFORMACIÓN DE LICENCIA", 
-                              font=(MODERN_FONT, 14, "bold"), fg=COLOR_ACCENT, bg=COLOR_BG)
-        title_label.pack(pady=(0, 20))
-        
-        user_frame = tk.Frame(main_frame, bg=COLOR_BG)
-        user_frame.pack(fill="x", pady=10)
-        
-        tk.Label(user_frame, text="Usuario:", 
-                font=(MODERN_FONT, 11, "bold"), fg="#FFFFFF", bg=COLOR_BG).pack(anchor="w")
-        
-        user_value = tk.Label(user_frame, text=username if username else "No registrado", 
-                             font=(MODERN_FONT, 11), fg=COLOR_TEXT, bg=COLOR_BG)
-        user_value.pack(anchor="w", pady=(5, 0))
-        
-        expiry_frame = tk.Frame(main_frame, bg=COLOR_BG)
-        expiry_frame.pack(fill="x", pady=10)
-        
-        tk.Label(expiry_frame, text="Fecha de expiración:", 
-                font=(MODERN_FONT, 11, "bold"), fg="#FFFFFF", bg=COLOR_BG).pack(anchor="w")
-        
-        # Helper interno para validar fecha
-        def is_license_valid(expiry_date_str):
-            try:
-                day, month, year = map(int, expiry_date_str.split('/'))
-                expiry_date = datetime.datetime(year, month, day)
-                return expiry_date > datetime.datetime.now()
-            except:
-                return False
 
-        # Note: necesitamos datetime aqui
-        import datetime
-        
-        is_valid = False
-        if expiry_date:
-            try:
-                 day, month, year = map(int, expiry_date.split('/'))
-                 if datetime.datetime(year, month, day) > datetime.datetime.now():
-                     is_valid = True
-            except:
-                pass
-
-        expiry_value = tk.Label(expiry_frame, text=expiry_date if expiry_date else "Sin licencia activa", 
-                               font=(MODERN_FONT, 11), 
-                               fg=COLOR_TEXT if is_valid else COLOR_WARNING, 
-                               bg=COLOR_BG)
-        expiry_value.pack(anchor="w", pady=(5, 0))
-        
-        status_frame = tk.Frame(main_frame, bg=COLOR_BG)
-        status_frame.pack(fill="x", pady=10)
-        
-        tk.Label(status_frame, text="Estado:", 
-                font=(MODERN_FONT, 11, "bold"), fg="#FFFFFF", bg=COLOR_BG).pack(anchor="w")
-        
-        status_text = "VENCIDA"
-        status_color = COLOR_WARNING
-        
-        if not username or not expiry_date:
-            status_text = "SIN LICENCIA"
-        elif is_valid:
-            status_text = "ACTIVA"
-            status_color = COLOR_TEXT
-            
-        status_value = tk.Label(status_frame, text=status_text, 
-                               font=(MODERN_FONT, 11, "bold"), fg=status_color, bg=COLOR_BG)
-        status_value.pack(anchor="w", pady=(5, 0))
-        
-        close_btn = tk.Button(main_frame, text="Cerrar", 
-                             command=info_window.destroy,
-                             bg=COLOR_HOVER, fg="#FFFFFF", 
-                             font=(MODERN_FONT, 10, "bold"),
-                             relief="flat", padx=20, pady=5)
-        close_btn.pack(pady=(20, 0))
-
-    def get_current_license_info(self):
-        """Obtiene la información de la licencia actual desde un archivo de configuración"""
-        config_path = os.path.join(os.path.dirname(sys.argv[0]), "cache_core_license.cfg")
-        
-        username = None
-        expiry_date = None
-        
-        try:
-            if os.path.exists(config_path):
-                with open(config_path, 'r') as f:
-                    data = json.load(f)
-                    username = data.get('username', '')
-                    expiry_timestamp = data.get('expiry_date', 0)
-                    
-                    if expiry_timestamp:
-                        import datetime
-                        expiry_date = datetime.datetime.fromtimestamp(expiry_timestamp).strftime('%d/%m/%Y')
-        except:
-            pass
-        
-        return username, expiry_date
-    
-    def load_background_image(self):
-        """Carga la imagen de fondo estática desde la carpeta assets"""
-        try:
-            # Rutas posibles para la imagen de fondo
-            bg_paths = [
-                os.path.join(os.path.dirname(__file__), "assets", "background.png"),
-                os.path.join(os.path.dirname(__file__), "assets", "background.jpg"),
-                os.path.join(os.getcwd(), "assets", "background.png"),
-                os.path.join(os.getcwd(), "assets", "background.jpg")
-            ]
-            
-            for path in bg_paths:
-                if os.path.exists(path):
-                    img = Image.open(path)
-                    img = img.resize((900, 700), Image.Resampling.LANCZOS)
-                    self.bg_photo = ImageTk.PhotoImage(img)
-                    self.bg_canvas.create_image(0, 0, image=self.bg_photo, anchor="nw")
-                    return
-            
-            # Si no se encuentra imagen, usar color de fondo simple
-            self.bg_canvas.create_rectangle(0, 0, 900, 700, fill=COLOR_BG, outline="")
-            
-        except Exception as e:
-            print(f"Error cargando imagen de fondo: {e}")
-            # Fondo de respaldo
-            self.bg_canvas.create_rectangle(0, 0, 900, 700, fill=COLOR_BG, outline="")
-    
-    def on_closing(self):
-        """Maneja el cierre de la aplicación"""
-        if messagebox.askokcancel("Salir", "¿Estás seguro de que quieres salir de Windows-Optimizer-V1?"):
-            def fade_out(alpha=1.0):
-                if alpha > 0.0:
-                    self.root.attributes('-alpha', alpha)
-                    self.root.after(10, fade_out, alpha - 0.05)
-                else:
-                    self.root.destroy()
-            
-            fade_out()
-
-if __name__ == "__main__":
+def main():
     if sys.platform == "win32":
         try:
             import ctypes
             ctypes.windll.shcore.SetProcessDpiAwareness(1)
         except:
             pass
-        
-    app = CacheCoreApp()
-    app.root.mainloop()
+    
+    app = QApplication(sys.argv)
+    window = WindowsOptimizerApp()
+    window.show()
+    sys.exit(app.exec())
+
+
+if __name__ == "__main__":
+    main()

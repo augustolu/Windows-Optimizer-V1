@@ -2,6 +2,77 @@ import tkinter as tk
 import time
 from config.settings import COLOR_HOVER, COLOR_WARNING, MULTI_LINE_FONT, MODERN_FONT, COLOR_ACCENT
 
+class GlassmorphicFrame(tk.Canvas):
+    """Frame con efecto glassmorphism - fondo semi-transparente con borde"""
+    def __init__(self, parent, width=860, height=660, corner_radius=20, **kwargs):
+        super().__init__(parent, width=width, height=height, 
+                        highlightthickness=0, bg=parent.cget("bg"))
+        self.width = width
+        self.height = height
+        self.corner_radius = corner_radius
+        
+        # Dibujar el fondo glassmorphic
+        self.draw_glass_background()
+        
+        # Frame interno para contenido (transparente)
+        self.content_frame = tk.Frame(self, bg=parent.cget("bg"), bd=0, highlightthickness=0)
+        self.content_frame.place(x=20, y=20, width=width-40, height=height-40)
+        
+    def draw_glass_background(self):
+        """Dibuja el fondo con efecto glass"""
+        # Sombra externa (más oscura)
+        self.create_rounded_rect(5, 5, self.width-5, self.height-5, 
+                                self.corner_radius, fill="#10001A", outline="")
+        
+        # Fondo principal con gradiente oscuro
+        self.create_gradient_glass(2, 2, self.width-2, self.height-2)
+        
+        # Borde brillante exterior
+        self.create_rounded_rect(0, 0, self.width, self.height, 
+                                self.corner_radius, fill="", 
+                                outline="#CC00FF", width=3)
+        
+        # Borde interior más sutil
+        self.create_rounded_rect(3, 3, self.width-3, self.height-3, 
+                                self.corner_radius, fill="", 
+                                outline="#9900CC", width=1)
+        
+        # Reflejo superior (efecto vidrio) - más claro
+        self.create_rounded_rect(8, 8, self.width-8, self.height//4, 
+                                self.corner_radius, fill="#3D005C", outline="")
+    
+    def create_rounded_rect(self, x1, y1, x2, y2, r=10, **kwargs):
+        """Crea un rectángulo con bordes redondeados"""
+        points = [x1+r, y1,
+                 x2-r, y1,
+                 x2, y1,
+                 x2, y1+r,
+                 x2, y2-r,
+                 x2, y2,
+                 x2-r, y2,
+                 x1+r, y2,
+                 x1, y2,
+                 x1, y2-r,
+                 x1, y1+r,
+                 x1, y1]
+        return self.create_polygon(points, **kwargs, smooth=True)
+    
+    def create_gradient_glass(self, x1, y1, x2, y2):
+        """Crea un gradiente glassmorphic (de oscuro a menos oscuro)"""
+        steps = 40
+        for i in range(steps):
+            ratio = i / steps
+            # Gradiente de oscuro morado a morado medio
+            r = int(30 + (60 * ratio))  # 30 -> 90
+            g = int(0 + (0 * ratio))     # 0 -> 0
+            b = int(51 + (102 * ratio))  # 51 -> 153
+            color = f"#{r:02x}{g:02x}{b:02x}"
+            y_start = y1 + (y2 - y1) * (i / steps)
+            y_end = y1 + (y2 - y1) * ((i + 1) / steps)
+            self.create_rounded_rect(x1, y_start, x2, y_end, self.corner_radius, 
+                                   fill=color, outline="")
+
+
 class RoundedButton(tk.Canvas):
     """Botón personalizado con bordes redondeados, gradientes y animaciones"""
     def __init__(self, parent, width=120, height=40, corner_radius=10, 

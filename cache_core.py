@@ -8,9 +8,9 @@ if current_dir not in sys.path:
 
 if __name__ == "__main__":
     try:
-        from main import CacheCoreApp
+        from main import main
     except ImportError as e:
-        print(f"Error importing CacheCoreApp: {e}")
+        print(f"Error importing main: {e}")
         # Fallback debug info
         print(f"Current path: {sys.path}")
         print(f"Current directory contents: {os.listdir(current_dir)}")
@@ -24,5 +24,4 @@ if __name__ == "__main__":
         except:
             pass
         
-    app = CacheCoreApp()
-    app.root.mainloop()
+    main()
