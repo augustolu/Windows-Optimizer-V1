@@ -1,108 +1,62 @@
-# Windows-Optimizer-V1
+# CacheCore Windows Default Optimizer
 
-![Windows Optimizer](https://img.shields.io/badge/Platform-Windows-blue)
-![Python](https://img.shields.io/badge/Python-3.x-green)
-![License](https://img.shields.io/badge/License-Proprietary-red)
+**CacheCore Windows Default Optimizer** es una solución técnica avanzada diseñada para la optimización integral de sistemas operativos **Windows 10** y **Windows 11**. El software permite elevar el rendimiento del sistema mediante **ajustes profundos en el registro**, **gestión de prioridades de kernel** y un **mantenimiento exhaustivo de archivos residuales**.
 
-**Windows-Optimizer-V1** es un sistema de optimización avanzado para Windows que permite mejorar el rendimiento del sistema mediante ajustes de registro, limpieza de archivos temporales, y optimizaciones del sistema.
+## Problemática Abordada
 
-## 🚀 Características
+Los sistemas operativos modernos ejecutan por defecto múltiples servicios de **telemetría**, **mantenimiento automático** y **perfiles de ahorro de energía** que limitan el potencial del hardware. **CacheCore** resuelve estas ineficiencias mediante la reconfiguración de parámetros críticos que usualmente están fuera del alcance del usuario promedio para asegurar una latencia mínima y máxima responsividad.
 
-- ⚡ **Optimización del Sistema**: Mejora el rendimiento de Windows con ajustes automáticos
-- 🔧 **Mantenimiento Avanzado**: Limpieza profunda del sistema
-- 🎛️ **Control de Prioridades**: Ajustes de Win32PrioritySeparation y NoLazyMode
-- 🔑 **Sistema de Licencias**: Generación de claves de licencia basadas en hardware
-- 🎨 **Interfaz Moderna**: Diseño profesional con Tkinter
+## Características Técnicas de Optimización
 
-## 📋 Requisitos
+El núcleo del software aplica modificaciones permanentes en el **Registro de Windows** y en los datos de configuración de arranque (**BCD**):
 
-- Windows 10/11 (22H2 o superior)
-- Python 3.8 o superior
-- Permisos de Administrador
+* **Optimización de Kernel**: Control de la separación de prioridades mediante **Win32PrioritySeparation** y activación del modo **NoLazyMode** para una gestión de procesos más agresiva.
+* **Desactivación de Power Throttling**: Elimina las restricciones de energía que limitan la frecuencia del **procesador** en procesos específicos para garantizar un rendimiento constante.
+* **Gestión de Respuesta del Sistema**: Ajusta valores de **SystemResponsiveness** y **NetworkThrottlingIndex** para priorizar aplicaciones de usuario y tráfico de red crítico.
+* **Optimización de Interfaz (UI)**: Reduce el **MenuShowDelay** a cero y activa **AutoEndTasks**, mejorando significativamente la fluidez de la experiencia de usuario.
+* **Ajustes de BCD**: Configuración de **disabledynamictick** y **useplatformtick** para estabilizar el temporizador global del sistema y reducir fluctuaciones.
 
-## 📦 Dependencias
+El software realiza un debloat profundo del sistema, desactivando servicios que consumen recursos de forma persistente o que generan interrupciones innecesarias en el procesador:
 
-```bash
-pip install pillow
-```
+* **Telemetría y Recopilación de Datos**: Desactivación total de DiagTrack (Experiencias del usuario y telemetría) y dmwappushservice, eliminando el envío de datos en segundo plano y liberando ciclos de CPU.
+* **Gestión de Memoria y Almacenamiento**: Deshabilitación de SysMain (antiguo Superfetch) para evitar el uso excesivo de disco y RAM en sistemas con unidades SSD, eliminando picos de latencia de entrada/salida.
+* **Optimización de Red y Entrega**: Corte del servicio DoSvc (Optimización de entrega), impidiendo que el sistema utilice ancho de banda para distribuir actualizaciones a otros equipos mediante redes P2P.
+* **Reducción de Latencia de Indexación**: Desactivación selectiva de WSearch (Windows Search) para evitar que el indexador analice archivos y consuma recursos durante sesiones de alta carga de trabajo.
+* **Eliminación de Procesos de Seguimiento**: Suspensión del Distributed Link Tracking Client, que mantiene vínculos innecesarios entre archivos en redes locales, reduciendo el "overhead" del sistema de archivos.
 
-## 🖼️ Configurar Imagen de Fondo
+## Mantenimiento y Diagnóstico Avanzado
 
-Para personalizar la imagen de fondo de la aplicación:
+El módulo de mantenimiento profesional incluye herramientas de auditoría y limpieza del entorno:
 
-1. **Coloca tu imagen** en la carpeta `assets/` del proyecto:
-   ```
-   Windows-Optimizer-V1/
-   └── assets/
-       └── background.png
-   ```
+* **Purga de Archivos Temporales**: Eliminación de registros y archivos residuales en los directorios **%TEMP%**, **%WINDIR%\Temp** y **%LOCALAPPDATA%\Temp**.
+* **Test de Latencia de Núcleo**: Evaluación de la estabilidad de respuesta en el **Core 0** del sistema con precisión de nanosegundos para identificar cuellos de botella.
+* **Benchmark de Almacenamiento**: Pruebas de velocidad de **lectura y escritura secuencial** para auditar el estado físico y rendimiento de los discos.
+* **Auditoría de Procesos**: Identificación de procesos con alto consumo de **RAM** y listado de aplicaciones en el **inicio automático** del sistema.
 
-2. **Formatos soportados**: PNG o JPG
-3. **Tamaño recomendado**: 900x700 píxeles
-4. **Nombre del archivo**: `background.png` o `background.jpg`
+## Instrucciones de Ejecución
 
-> **Nota**: Si no se encuentra ninguna imagen, el programa usará un fondo de color sólido por defecto.
+Para el correcto funcionamiento de las modificaciones de bajo nivel, es necesario cumplir con los siguientes requisitos técnicos:
 
-## 🎯 Instalación
+1. **Permisos de Administrador**: Es estrictamente obligatorio ejecutar la aplicación con **privilegios elevados** para permitir la escritura en ramas críticas del registro como **HKEY_LOCAL_MACHINE**.
+2. **Dependencias**: Se requiere la instalación previa de la librería **Pillow** para la gestión de la interfaz gráfica profesional.
+3. **Autenticación**: El acceso al sistema está protegido por una **clave de licencia de hardware** única por equipo.
 
-1. Clona el repositorio:
-   ```bash
-   git clone https://github.com/augustolu/Windows-Optimizer-V1.git
-   cd Windows-Optimizer-V1
-   ```
+## Seguridad e Integridad
 
-2. Instala las dependencias:
-   ```bash
-   pip install -r requirements.txt
-   ```
+**CacheCore** opera de forma transparente y bajo parámetros de seguridad estandarizados:
 
-3. (Opcional) Coloca tu imagen de fondo en la carpeta `assets/`
+* **Transparencia de Comandos**: Todas las acciones realizadas se reflejan en tiempo real en la **Consola de Logs** integrada para supervisión del usuario.
+* **Reportes Locales**: Tras cada sesión de mantenimiento, se genera un **archivo log (.txt)** detallado con los resultados de las pruebas y la limpieza efectuada.
+* **Sin Conexiones Externas**: Las optimizaciones son estrictamente locales, garantizando que el software no es una herramienta de vulneración de terceros, sino un optimizador de recursos propio.
 
-4. Ejecuta el programa **como Administrador**:
-   ```bash
-   python cache_core.py
-   ```
+## Licencia y Propiedad Intelectual
 
-## 🔐 Uso
+© 2025 **CacheCore Windows Default Optimizer**. Todos los derechos reservados.
 
-1. **Ejecutar como Administrador**: El programa requiere permisos de administrador para funcionar correctamente
-2. **Contraseña**: Ingresa la contraseña al iniciar (configurada en el sistema)
-3. **Optimización**: Haz clic en "⚡ OPTIMIZACIÓN DEL SISTEMA" para mejorar el rendimiento
-4. **Mantenimiento**: Usa "🔧 MANTENIMIENTO AVANZADO" para limpiar archivos temporales (recomendado 1 vez por semana)
-
-## 🛠️ Características Técnicas
-
-### Optimizaciones Disponibles
-
-- **NoLazyMode**: Optimización de la gestión de procesos en Windows
-- **Win32PrioritySeparation**: Control de la separación de prioridades del sistema
-- **Limpieza de Caché**: Elimina archivos temporales y cachés del sistema
-- **Optimización de DNS**: Limpia la caché DNS para mejorar la conectividad
-
-### Estructura del Proyecto
-
-```
-Windows-Optimizer-V1/
-├── assets/              # Carpeta para imagen de fondo
-├── config/              # Configuraciones del sistema
-├── features/            # Módulos de optimización y mantenimiento
-├── ui/                  # Componentes de interfaz de usuario
-├── utils/               # Utilidades del sistema
-├── cache_core.py        # Punto de entrada principal
-├── main.py              # Aplicación principal
-└── README.md            # Este archivo
-```
-
-## ⚠️ Advertencias
-
-- **Requiere permisos de Administrador**: El programa modifica configuraciones del sistema
-- **Uso responsable**: No ejecutar mantenimiento con demasiada frecuencia (máximo 1 vez por semana)
-- **Respaldo**: Se recomienda crear un punto de restauración antes de usar
-
-## 📄 Licencia
-
-© 2025 Windows-Optimizer-V1 - Todos los derechos reservados. Sistema protegido por leyes de propiedad intelectual.
+El software se rige bajo una **Licencia Propietaria**:
+* **Validación de Hardware (HWID)**: El sistema utiliza un Identificador unico para vincular la licencia a cada equipo.
+* **Protección de Lógica**: Queda prohibida la **ingeniería inversa**, **descompilación** o **redistribución no autorizada** de los módulos de optimización y seguridad para proteger la propiedad intelectual del proyecto.
 
 ---
 
-**Nota**: Este software está protegido. Distribución no autorizada prohibida.
+**Nota de Seguridad**: Se recomienda encarecidamente crear un **Punto de Restauración del Sistema** antes de proceder con las optimizaciones completas, ya que las modificaciones en el registro tienen carácter permanente.
