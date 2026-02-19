@@ -21,7 +21,7 @@ if __name__ == "__main__":
         try:
             import ctypes
             ctypes.windll.shcore.SetProcessDpiAwareness(1)
-        except:
+        except Exception:
             pass
         
     main()

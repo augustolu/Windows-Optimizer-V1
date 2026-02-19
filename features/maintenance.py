@@ -187,7 +187,7 @@ class SystemMaintenance:
         for proc in psutil.process_iter(['pid', 'name', 'memory_info', 'cpu_percent']):
             try:
                 processes.append(proc.info)
-            except:
+            except Exception:
                 continue
         top_procs = sorted(processes, key=lambda p: p['memory_info'].rss if p['memory_info'] else 0, reverse=True)[:5]
 

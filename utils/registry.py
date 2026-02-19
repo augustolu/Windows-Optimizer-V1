@@ -46,5 +46,5 @@ def get_registry_value(key_path, value_name):
         value, regtype = winreg.QueryValueEx(key, value_name)
         winreg.CloseKey(key)
         return value
-    except:
+    except Exception:
         return None

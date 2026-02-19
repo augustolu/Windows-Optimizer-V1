@@ -1,2 +1,5 @@
-pillow
 PyQt6
+matplotlib
+psutil
+wmi
+py7zr

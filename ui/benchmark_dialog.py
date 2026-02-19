@@ -173,13 +173,13 @@ class BenchmarkDialog(QDialog):
         layout.addWidget(self.canvas)
         
         # Inicializar gráfica vacía
-        self.ax = self.figure.add_subplot(111, facecolor='rgba(15, 28, 46, 0.6)')
+        self.ax = self.figure.add_subplot(111, facecolor=(15/255, 28/255, 46/255, 0.6))
         self.ax.set_title("Selecciona un benchmark para comenzar", 
                          color='#ffffff', fontsize=16, fontweight='bold', pad=20)
         self.ax.tick_params(colors='#ffffff', labelsize=10)
         self.ax.grid(True, alpha=0.2, color='#6200ea', linestyle='--')
         for spine in self.ax.spines.values():
-            spine.set_edgecolor('rgba(98, 0, 234, 0.6)')
+            spine.set_edgecolor((98/255, 0, 234/255, 0.6))
             spine.set_linewidth(2)
         
         panel.setLayout(layout)

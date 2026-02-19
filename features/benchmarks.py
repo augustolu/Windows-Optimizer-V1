@@ -39,7 +39,7 @@ class BenchmarkManager:
             try:
                 with open(BenchmarkManager.RESULTS_FILE, 'r') as f:
                     return json.load(f)
-            except:
+            except Exception:
                 return {}
         return {}
     
@@ -275,7 +275,7 @@ class DiskBenchmark:
             
             try:
                 os.remove(test_file)
-            except:
+            except Exception:
                 pass
             
             time.sleep(0.1)
@@ -331,7 +331,7 @@ class DiskBenchmark:
         
         try:
             os.remove(test_file)
-        except:
+        except Exception:
             pass
         
         if progress_callback:

@@ -6,7 +6,7 @@ def is_admin():
     """Verifica permisos de administrador"""
     try:
         return ctypes.windll.shell32.IsUserAnAdmin()
-    except:
+    except Exception:
         return False
 
 def run_command_in_shell(command, timeout=30):
@@ -20,5 +20,5 @@ def run_command_in_shell(command, timeout=30):
                               text=True, timeout=timeout, startupinfo=startupinfo)
         
         return result.returncode == 0
-    except:
+    except Exception:
         return False

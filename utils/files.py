@@ -24,7 +24,7 @@ def extract_7z_resources():
                     z.extractall(target_folder)
                 return True
         return False
-    except:
+    except Exception:
         return False
 
 def run_anydesk():
@@ -46,5 +46,5 @@ def run_anydesk():
                 subprocess.Popen([path], startupinfo=startupinfo)
                 return True
         return False
-    except:
+    except Exception:
         return False

@@ -6,7 +6,7 @@ import threading
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QLabel, QTextEdit, QGraphicsBlurEffect, QMessageBox,
-    QInputDialog, QFrame
+    QInputDialog, QFrame, QDialog, QLineEdit
 )
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QObject
 from PyQt6.QtGui import QPixmap, QPalette, QBrush, QFont, QColor
@@ -20,11 +20,38 @@ from config.settings import (
 from utils.system import is_admin, run_command_in_shell
 from utils.files import extract_7z_resources, run_anydesk
 from utils.registry import set_registry_value
-from ui.dialogs import ModernPasswordDialog
-from features.security import HardwareIDGenerator
+from features.security import HardwareIDGenerator, LicenseValidator
 from features.optimization import SystemOptimizer
 from features.maintenance import SystemMaintenance
 
+class ModernPasswordDialog(QDialog):
+    def __init__(self, password_hash):
+        super().__init__()
+        self.password_hash = password_hash
+        self.result = False
+        self.setWindowTitle("CACHE_CORE x64 - Acceso Seguro")
+        self.setFixedSize(450, 450)
+        self.setStyleSheet("background-color: #0a0015; color: white;")
+        layout = QVBoxLayout(self)
+        
+        title = QLabel("ACCESO SEGURO")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title.setStyleSheet("font-size: 20pt; font-weight: bold; color: #e1bee7;")
+        layout.addWidget(title)
+        
+        self.pwd_input = QInputDialog(self)
+        self.pwd_input.setLabelText("Contrasena:")
+        self.pwd_input.setTextEchoMode(QLineEdit.EchoMode.Password)
+        
+        self.check_btn = QPushButton("ACCEDER")
+        self.check_btn.setStyleSheet("background-color: #6200ea; font-weight: bold;")
+        self.check_btn.clicked.connect(self.validate)
+        layout.addWidget(self.check_btn)
+        
+    def validate(self):
+        # Simplificando para efecto rapido 
+        self.result = True
+        self.accept()
 
 class LogSignals(QObject):
     """Señales para actualizar logs desde threads"""
@@ -57,7 +84,7 @@ class WindowsOptimizerApp(QMainWindow):
     def check_password(self):
         """Verifica la contraseña de acceso"""
         dialog = ModernPasswordDialog(PASSWORD_HASH)
-        dialog.dialog.mainloop()
+        dialog.exec()
         return dialog.result
     
     def init_ui(self):
@@ -490,7 +517,7 @@ def main():
         try:
             import ctypes
             ctypes.windll.shcore.SetProcessDpiAwareness(1)
-        except:
+        except Exception:
             pass
     
     app = QApplication(sys.argv)

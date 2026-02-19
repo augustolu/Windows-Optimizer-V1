@@ -72,7 +72,7 @@ class LicenseValidator:
                 with open(config_path, 'r') as f:
                     data = json.load(f)
                     username = data.get('username', username)
-        except:
+        except Exception:
             pass
         
         return True, "Licencia válida", username, date_str
