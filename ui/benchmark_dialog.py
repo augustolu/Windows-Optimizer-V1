@@ -1,9 +1,10 @@
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QPushButton, 
                              QLabel, QListWidget, QTextEdit, QMessageBox, QWidget)
-from PyQt6.QtCore import Qt, QThread, pyqtSignal
-from PyQt6.QtGui import QFont
+from PyQt6.QtCore import Qt, QThread, pyqtSignal, QTimer
+from PyQt6.QtGui import QFont, QPainter, QRadialGradient, QBrush, QColor
 import matplotlib
 matplotlib.use('Qt5Agg')
+import numpy as np
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import threading
@@ -45,63 +46,107 @@ class BenchmarkDialog(QDialog):
         self.current_thread = None
         self.benchmark_results = {}
         
+        self.animation_timer = QTimer(self)
+        self.animation_progress = 0
+        self.animation_target_x = []
+        self.animation_target_y = []
+        self.animation_line = None
+        self.animation_points = None
+        self.animation_timer.timeout.connect(self._animate_chart_step)
+        
         self.init_ui()
         self.load_historical_data()
     
     def init_ui(self):
         main_layout = QHBoxLayout()
         
-        # Panel izquierdo - Selección de benchmarks
         left_panel = self.create_left_panel()
+        left_panel.setObjectName("glassPanel")
         main_layout.addWidget(left_panel, 1)
         
         # Panel central - Gráficas
         center_panel = self.create_center_panel()
+        center_panel.setObjectName("glassPanel")
         main_layout.addWidget(center_panel, 3)
         
         # Panel derecho - Log y controles
         right_panel = self.create_right_panel()
+        right_panel.setObjectName("glassPanel")
         main_layout.addWidget(right_panel, 1)
         
         self.setLayout(main_layout)
         
-        # Aplicar estilos con glassmorfismo
+        # Aplicar estilos con glassmorfismo adaptado al HTML
         self.setStyleSheet("""
             QDialog {
-                background-color: #0f0a1f;
+                background-color: transparent;
+            }
+            #glassPanel {
+                background-color: rgba(255, 255, 255, 0.03);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 20px;
             }
             QLabel {
                 color: #ffffff;
                 background: transparent;
+                font-family: 'Inter', sans-serif;
             }
             QPushButton {
-                background: rgba(98, 0, 234, 0.5);
+                background: rgba(255, 255, 255, 0.05);
                 color: white;
-                border: 2px solid rgba(255, 255, 255, 0.3);
+                border: 1px solid rgba(255, 255, 255, 0.1);
                 padding: 12px;
                 border-radius: 8px;
                 font-weight: bold;
+                font-family: 'Inter', sans-serif;
             }
             QPushButton:hover {
-                background: rgba(124, 77, 255, 0.7);
+                background: rgba(255, 255, 255, 0.1);
             }
             QListWidget {
-                background: rgba(20, 20, 40, 0.6);
-                color: #ffffff;
-                border: 2px solid rgba(98, 0, 234, 0.5);
-                border-radius: 10px;
+                background: transparent;
+                color: #d1d5db;
+                border: none;
+                font-family: 'Inter', sans-serif;
+                outline: none;
+            }
+            QListWidget::item {
+                background: rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 8px;
+                padding: 12px;
+                margin-bottom: 8px;
+                font-weight: 600;
+                font-size: 13px;
+            }
+            QListWidget::item:hover {
+                background: rgba(255, 255, 255, 0.1);
+                border: 1px solid rgba(38, 198, 255, 0.5);
             }
             QListWidget::item:selected {
-                background: rgba(98, 0, 234, 0.6);
+                background: rgba(191, 0, 255, 0.1);
+                border: 1px solid #bf00ff;
+                color: white;
+                font-weight: bold;
             }
             QTextEdit {
-                background: rgba(15, 20, 40, 0.7);
-                color: #00ff88;
-                border: 2px solid rgba(98, 0, 234, 0.5);
-                border-radius: 10px;
-                font-family: 'Consolas', monospace;
+                background: transparent;
+                color: #d1d5db;
+                border: none;
             }
         """)
+        
+    def paintEvent(self, event):
+        """Dibuja el fondo radial gradient como el CSS de Tailwind"""
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        
+        gradient = QRadialGradient(self.width() * 0.2, self.height() * 0.2, self.width())
+        gradient.setColorAt(0, QColor("#1a1b4b"))
+        gradient.setColorAt(0.4, QColor("#0d0e1f"))
+        gradient.setColorAt(1, QColor("#000000"))
+        
+        painter.fillRect(self.rect(), QBrush(gradient))
     
     def create_left_panel(self):
         panel = QWidget()
@@ -128,13 +173,15 @@ class BenchmarkDialog(QDialog):
         self.benchmark_list.currentRowChanged.connect(self.on_benchmark_selected)
         layout.addWidget(self.benchmark_list)
         
-        # Botones sin emojis
+        # Botones sin emojis adaptados a UI neon
         self.run_btn = QPushButton("EJECUTAR BENCHMARK")
+        self.run_btn.setStyleSheet("border: 1px solid rgba(0, 100, 255, 0.5); color: white;")
         self.run_btn.clicked.connect(self.run_selected_benchmark)
         self.run_btn.setMinimumHeight(45)
         layout.addWidget(self.run_btn)
         
         self.run_all_btn = QPushButton("EJECUTAR TODOS")
+        self.run_all_btn.setStyleSheet("border: 1px solid rgba(0, 100, 255, 0.5); color: white;")
         self.run_all_btn.clicked.connect(self.run_all_benchmarks)
         self.run_all_btn.setMinimumHeight(45)
         layout.addWidget(self.run_all_btn)
@@ -142,12 +189,12 @@ class BenchmarkDialog(QDialog):
         self.delete_btn = QPushButton("BORRAR BENCHMARK")
         self.delete_btn.setStyleSheet("""
             QPushButton {
-                background: rgba(229, 57, 53, 0.4);
-                border: 2px solid rgba(244, 67, 54, 0.6);
+                background: rgba(255, 50, 50, 0.05);
+                border: 1px solid rgba(255, 50, 50, 0.5);
+                color: #ffcccc;
             }
             QPushButton:hover {
-                background: rgba(244, 67, 54, 0.6);
-                border: 2px solid rgba(255, 82, 82, 0.8);
+                background: rgba(255, 50, 50, 0.15);
             }
         """)
         self.delete_btn.clicked.connect(self.delete_selected_benchmark)
@@ -167,20 +214,19 @@ class BenchmarkDialog(QDialog):
         title.setFont(QFont("Arial", 15, QFont.Weight.Bold))
         layout.addWidget(title)
         
-        # Matplotlib canvas
-        self.figure = Figure(figsize=(10, 7), facecolor='none')
+        # Matplotlib canvas (usando color oscuro)
+        self.figure = Figure(figsize=(10, 7), facecolor='#0d0e1f')
         self.canvas = FigureCanvas(self.figure)
         layout.addWidget(self.canvas)
         
         # Inicializar gráfica vacía
-        self.ax = self.figure.add_subplot(111, facecolor=(15/255, 28/255, 46/255, 0.6))
+        self.ax = self.figure.add_subplot(111, facecolor='#0d0e1f')
         self.ax.set_title("Selecciona un benchmark para comenzar", 
                          color='#ffffff', fontsize=16, fontweight='bold', pad=20)
-        self.ax.tick_params(colors='#ffffff', labelsize=10)
-        self.ax.grid(True, alpha=0.2, color='#6200ea', linestyle='--')
+        self.ax.tick_params(colors=(255/255, 255/255, 255/255, 0.4), labelsize=10, length=0)
+        self.ax.grid(True, alpha=0.1, color='white', linestyle='-')
         for spine in self.ax.spines.values():
-            spine.set_edgecolor((98/255, 0, 234/255, 0.6))
-            spine.set_linewidth(2)
+            spine.set_visible(False)
         
         panel.setLayout(layout)
         return panel
@@ -205,6 +251,16 @@ class BenchmarkDialog(QDialog):
         
         # Botón limpiar
         self.clear_btn = QPushButton("LIMPIAR LOG")
+        self.clear_btn.setStyleSheet("""
+            QPushButton {
+                background: rgba(38, 198, 255, 0.1);
+                border: 1px solid rgba(38, 198, 255, 0.3);
+                color: #dbeafe;
+            }
+            QPushButton:hover {
+                background: rgba(38, 198, 255, 0.2);
+            }
+        """)
         self.clear_btn.clicked.connect(self.log_text.clear)
         self.clear_btn.setMinimumHeight(40)
         layout.addWidget(self.clear_btn)
@@ -213,8 +269,23 @@ class BenchmarkDialog(QDialog):
         return panel
     
     def add_log(self, message):
-        """Añade mensaje al log"""
-        self.log_text.append(message)
+        """Añade mensaje al log con estilo HTML y colores definidos"""
+        if "[INFO]" in message:
+            message = message.replace("[INFO]", "<span style='color:#00ff00; font-weight:bold;'>[INFO]</span>")
+        elif "[OK]" in message:
+            message = message.replace("[OK]", "<span style='color:#00ff00; font-weight:bold;'>[RESULT]</span>")
+        elif "[>>]" in message:
+            message = message.replace("[>>]", "<span style='color:#00ff00; font-weight:bold;'>[EXECUTING]</span>")
+        elif "[ERR]" in message:
+            message = message.replace("[ERR]", "<span style='color:#ff2a2a; font-weight:bold;'>[ERROR]</span>")
+        
+        # Colorear números al final para matching de resultados
+        import re
+        message = re.sub(r'([\d\.,]+)$', r"<span style='color:#bf00ff; font-weight:bold;'>\1</span>", message)
+            
+        styled_msg = f"<div style='color:#d1d5db; font-family:Courier New; font-size:12px; margin-bottom:4px;'>{message}</div>"
+        
+        self.log_text.append(styled_msg)
         self.log_text.verticalScrollBar().setValue(
             self.log_text.verticalScrollBar().maximum()
         )
@@ -370,7 +441,7 @@ class BenchmarkDialog(QDialog):
             self.add_log(f"[OK] Benchmark completado y guardado")
             
             # Actualizar gráfica
-            self.update_graph(benchmark_name)
+            self.update_graph(benchmark_name, animate_append=True)
         
         # Rehabilitar botones
         self.run_btn.setEnabled(True)
@@ -397,7 +468,7 @@ class BenchmarkDialog(QDialog):
         if self.benchmark_results:
             self.add_log(f"[INFO] Cargados {len(self.benchmark_results)} resultados previos")
     
-    def update_graph(self, benchmark_name):
+    def update_graph(self, benchmark_name, animate_append=False):
         """Actualiza la gráfica con datos del benchmark"""
         self.ax.clear()
         
@@ -406,7 +477,14 @@ class BenchmarkDialog(QDialog):
         
         if benchmark_name not in all_results or not all_results[benchmark_name]:
             self.ax.set_title(f"No hay datos para {benchmark_name}", color='white')
-            self.ax.set_facecolor('#16213e')
+            
+            # Limpiar por completo el aspecto visual
+            self.ax.set_facecolor('#0d0e1f')
+            self.ax.tick_params(colors='none') 
+            self.ax.grid(False)
+            for spine in self.ax.spines.values():
+                spine.set_visible(False)
+                
             self.canvas.draw()
             return
         
@@ -437,48 +515,138 @@ class BenchmarkDialog(QDialog):
             ylabel = ""
             title = benchmark_name
         
-        # Crear gráfica
-        self.ax.plot(range(len(values)), values, 'o-', color='#7c4dff', linewidth=2, markersize=8)
+        # Clean axes spines
+        for spine in self.ax.spines.values():
+            spine.set_visible(False)
+            
+        # Configurar animación
+        self.animation_progress = 0
+        
+        x_vals = list(range(len(values)))
+        if len(values) >= 3:
+            x_arr = np.array(x_vals)
+            y_arr = np.array(values)
+            x_ext = np.concatenate(([x_arr[0]], x_arr, [x_arr[-1]]))
+            y_ext = np.concatenate(([y_arr[0]], y_arr, [y_arr[-1]]))
+            
+            x_smooth, y_smooth = [], []
+            for i in range(len(x_arr) - 1):
+                p0, p1, p2, p3 = y_ext[i], y_ext[i+1], y_ext[i+2], y_ext[i+3]
+                t = np.linspace(0, 1, 50)
+                h00 = 2*t**3 - 3*t**2 + 1
+                h10 = t**3 - 2*t**2 + t
+                h01 = -2*t**3 + 3*t**2
+                h11 = t**3 - t**2
+                m0 = 0.5 * (p2 - p0)
+                m1 = 0.5 * (p3 - p1)
+                y_segment = (h00*p1 + h10*m0 + h01*p2 + h11*m1).tolist()
+                x_segment = np.linspace(x_arr[i], x_arr[i+1], 50).tolist()
+                
+                if i == 0:
+                    x_smooth.extend(x_segment)
+                    y_smooth.extend(y_segment)
+                else:
+                    x_smooth.extend(x_segment[1:])
+                    y_smooth.extend(y_segment[1:])
+            
+            self.animation_target_x = x_smooth
+            self.animation_target_y = y_smooth
+        elif len(values) == 2:
+            x_smooth = np.linspace(0, 1, 50).tolist()
+            y_smooth = np.linspace(values[0], values[1], 50).tolist()
+            self.animation_target_x = x_smooth
+            self.animation_target_y = y_smooth
+        else:
+            self.animation_target_x = x_vals
+            self.animation_target_y = values
+            
+        if animate_append and len(values) > 1:
+            self.animation_progress = max(0, (len(values) - 2) * 50)
+            self.animation_step_size = 2
+        else:
+            self.animation_progress = 0
+            self.animation_step_size = max(2, len(self.animation_target_x) // 50)
+            
+        # Draw base chart components immediately
         self.ax.set_title(title, color='white', fontsize=14, fontweight='bold')
         self.ax.set_xlabel("Ejecuciones", color='white')
         self.ax.set_ylabel(ylabel, color='white')
-        self.ax.grid(True, alpha=0.3, color='#555')
-        self.ax.tick_params(colors='white')
-        self.ax.set_facecolor('#16213e')
-        
-        for spine in self.ax.spines.values():
-            spine.set_edgecolor('#6200ea')
+        self.ax.grid(True, alpha=0.1, color='white', linestyle='-')
+        self.ax.tick_params(colors=(1,1,1,0.4), length=0)
+        self.ax.set_facecolor('none')
         
         # Añadir línea promedio
         if len(values) > 1:
             avg_value = sum(values) / len(values)
-            self.ax.axhline(y=avg_value, color='#ffb300', linestyle='--', alpha=0.7, linewidth=2, label=f'Promedio: {avg_value:.1f}')
-            self.ax.legend(loc='upper left', facecolor='#16213e', edgecolor='#6200ea', labelcolor='white')
+            self.ax.axhline(y=avg_value, color='#a78bfa', linestyle='--', alpha=0.6, linewidth=1, label=f'Promedio: {avg_value:.1f}')
+            self.ax.legend(loc='upper left', facecolor='#0d0e1f', edgecolor='none', labelcolor='#a78bfa', fontsize=9)
         
-        # Añadir indicadores de mejora (+/-%) en cada punto
+        # Añadir indicadores de mejora (+/-%) en cada punto flotante
         for i in range(1, len(values)):
             prev_value = values[i-1]
             curr_value = values[i]
             
             if prev_value > 0:
-                # Para latencia, menor es mejor, invertir el cálculo
                 if benchmark_name == "network_latency":
                     percent_change = ((prev_value - curr_value) / prev_value) * 100
                 else:
                     percent_change = ((curr_value - prev_value) / prev_value) * 100
                 
-                # Color basado en mejora/degradación
-                color = '#00ff00' if percent_change > 0 else '#ff5252'
-                symbol = '+' if percent_change > 0 else ''
+                if percent_change > 0:
+                    bbox = dict(boxstyle="square,pad=0.3", fc="#132f1c", ec="#4ade80")
+                    color = "#4ade80"
+                    symbol = "+"
+                    self.ax.plot(i, curr_value, 'o', color='#4ade80', markerfacecolor='#1a1b4b', markeredgewidth=3, markersize=10)
+                else:
+                    bbox = dict(boxstyle="square,pad=0.3", fc="#330c0c", ec="#ef4444")
+                    color = "#ef4444"
+                    symbol = ""
+                    self.ax.plot(i, curr_value, 'o', color='#ef4444', markerfacecolor='#1a1b4b', markeredgewidth=3, markersize=10)
                 
-                # Añadir texto sobre el punto
-                self.ax.text(i, curr_value, f'{symbol}{percent_change:.1f}%', 
-                           color=color, fontsize=9, fontweight='bold',
-                           ha='center', va='bottom')
+                y_offset = 12 if percent_change > 0 else -20
+                self.ax.annotate(f"{symbol}{percent_change:.1f}%", xy=(i, curr_value), xytext=(0, y_offset),
+                                 textcoords="offset points", ha='center', va='bottom' if percent_change > 0 else 'top',
+                                 color=color, fontsize=9, fontweight='bold', bbox=bbox)
+        
+        # Prepara objetos animados vacíos
+        self.animation_line, = self.ax.plot([], [], '-', color='#bf00ff', linewidth=4)
+        self.animation_points, = self.ax.plot([], [], 'o', color='#e9d5ff', markerfacecolor='#1a1b4b', markeredgewidth=2, markersize=8)
         
         # Valor actual
         if values:
             latest = values[-1]
             self.ax.plot(len(values)-1, latest, 'o', color='#00ff00', markersize=12)
+            
+        self.ax.set_xlim(-0.2, len(values)-0.8 if len(values) > 1 else 1)
+        self.ax.set_ylim(min(values) * 0.9 if values else 0, max(values) * 1.1 if values else 1)
         
         self.canvas.draw()
+        
+        # Iniciar timer para simular animación CSS (100 pasos en ~1000ms = 10ms/paso)
+        self.animation_timer.start(10)
+        
+    def _animate_chart_step(self):
+        """Ejecuta un paso de animación del stroke curve"""
+        total_points = len(self.animation_target_x)
+        self.animation_progress += getattr(self, 'animation_step_size', 2)
+        
+        if self.animation_progress >= total_points:
+            self.animation_progress = total_points
+            self.animation_timer.stop()
+
+        idx = self.animation_progress
+        if idx == 0:
+            return
+            
+        current_x = self.animation_target_x[:idx]
+        current_y = self.animation_target_y[:idx]
+        
+        self.animation_line.set_data(current_x, current_y)
+        
+        # Puntos base sólo se dibujan en enteros
+        point_x = [x for x in current_x if float(x).is_integer()]
+        point_y = [self.animation_target_y[self.animation_target_x.index(x)] for x in point_x]
+        
+        self.animation_points.set_data(point_x, point_y)
+        
+        self.canvas.draw_idle()
